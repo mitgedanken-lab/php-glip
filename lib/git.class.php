@@ -49,6 +49,18 @@ function sha1_hex($bin)
     return bin2hex($bin);
 }
 
+/**
+ * @relates Git
+ * @brief Checks if a hex line is a valid SHA-1 hash.
+ *
+ * @param $hex (string) The hash in hexadecimal representation.
+ * @returns (bool) true if a hex-string is valid SHA-1 hash.
+ */
+function is_valid_sha1($hex)
+{
+    return strlen($hex)==40;
+}
+
 class Git
 {
     public $dir;
@@ -222,8 +234,8 @@ class Git
     {
         $pos = 0;
 
-        $base_size = Binary::git_varint($delta, &$pos);
-        $result_size = Binary::git_varint($delta, &$pos);
+        $base_size = Binary::git_varint($delta, $pos);
+        $result_size = Binary::git_varint($delta, $pos);
 
         $r = '';
         while ($pos < strlen($delta))
@@ -394,6 +406,47 @@ class Git
 	$object->unserialize($data);
 	assert($name == $object->getName());
 	return $object;
+    }
+
+    /**
+     * @brief Parses a revision reference (branch or tag)
+     *
+     * @param $branch (string) The branch to look up, defaulting to @em master.
+     * @returns (string) Binary SHA1 of parsed reference.
+     */
+    public function revParse($ref='HEAD',$count = 10)
+    {
+	if ($count==0) throw new Exception(sprintf('possible circular reference: %s', $ref));
+	if (is_valid_sha1($ref)) return sha1_bin($ref);
+	$path = sprintf('%s/%s', $this->dir, $ref);
+	if (file_exists($path))
+	{
+	    $data = trim(file_get_contents($path));
+	    if (substr($data,0,4)=='ref:')
+		return $this->RevParse(trim(substr($data,4)));
+	    elseif (is_valid_sha1($data))
+		return sha1_bin($data);
+	    else throw new Exception(sprintf('invalid reference: %s', $data));
+	}
+	$path = sprintf('%s/packed-refs', $this->dir);
+	if (file_exists($path))
+	{
+	    $head = NULL;
+	    $f = fopen($path, 'rb');
+	    flock($f, LOCK_SH);
+	    while ($head === NULL && ($line = fgets($f)) !== FALSE)
+	    {
+		if ($line{0} == '#')
+		    continue;
+		$parts = explode(' ', trim($line));
+		if (count($parts) == 2 && $parts[1] == $ref)
+		    $head = sha1_bin($parts[0]);
+	    }
+	    fclose($f);
+	    if ($head !== NULL)
+		return $head;
+	}
+	throw new Exception(sprintf('no such branch: %s', $ref));
     }
 
     /**
