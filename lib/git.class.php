@@ -418,8 +418,8 @@ class Git
      */
     public function getRefs()
     {
-        if (!isset($this->refcache)) $this->revcache = new GitRefCache($this->dir);
-        return $this->revcache->refs;
+        if (!isset($this->refcache)) $this->refcache = new GitRefCache($this->dir);
+        return $this->refcache->refs;
     }
 
     /**
@@ -430,8 +430,8 @@ class Git
      */
     public function getRef($ref)
     {
-        if (!isset($this->refcache)) $this->revcache = new GitRefCache($this->dir);
-        return $this->revcache->getRef($ref);
+        if (!isset($this->refcache)) $this->refcache = new GitRefCache($this->dir);
+        return $this->refcache->getRef($ref);
     }
 
     /**
