@@ -60,7 +60,7 @@ function sha1_hex($bin)
  */
 function is_valid_sha1($hex)
 {
-    return strlen($hex)==40;
+    return preg_match("/^[0-9a-fA-F]{40}$/",$hex)==1;
 }
 
 class Git
