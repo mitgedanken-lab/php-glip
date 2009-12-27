@@ -1,6 +1,7 @@
 <?php
 /*
  * Copyright (C) 2008, 2009 Patrik Fimml
+ * modified by Michael Vigovsky (C) 2009
  *
  * This file is part of glip.
  *
@@ -23,6 +24,7 @@ require_once('git_object.class.php');
 require_once('git_blob.class.php');
 require_once('git_commit.class.php');
 require_once('git_commit_stamp.class.php');
+require_once('git_ref_cache.class.php');
 require_once('git_tree.class.php');
 
 /**
@@ -409,44 +411,46 @@ class Git
     }
 
     /**
-     * @brief Parses a revision reference (branch or tag)
+     * @brief List all refs in repository.
      *
-     * @param $branch (string) The branch to look up, defaulting to @em master.
+     * @returns (array) associative array of where key is ref name
+     * and value is binary SHA1.
+     */
+    public function getRefs()
+    {
+        if (!isset($this->refcache)) $this->revcache = new GitRefCache($this->dir);
+        return $this->revcache->refs;
+    }
+
+    /**
+     * @brief Get a single ref.
+     *
+     * @param $ref (string) The ref to look up.
+     * @returns (string) binary SHA1 of reference or false if it is not found.
+     */
+    public function getRef($ref)
+    {
+        if (!isset($this->refcache)) $this->revcache = new GitRefCache($this->dir);
+        return $this->revcache->getRef($ref);
+    }
+
+    /**
+     * @brief Parses a revision reference or hex sha1
+     *
+     * @param $branch (string) The ref to look up, defaulting to @em HEAD.
      * @returns (string) Binary SHA1 of parsed reference.
      */
-    public function revParse($ref='HEAD',$count = 10)
+    public function revParse($ref='HEAD')
     {
-	if ($count==0) throw new Exception(sprintf('possible circular reference: %s', $ref));
-	if (is_valid_sha1($ref)) return sha1_bin($ref);
-	$path = sprintf('%s/%s', $this->dir, $ref);
-	if (file_exists($path))
-	{
-	    $data = trim(file_get_contents($path));
-	    if (substr($data,0,4)=='ref:')
-		return $this->RevParse(trim(substr($data,4)));
-	    elseif (is_valid_sha1($data))
-		return sha1_bin($data);
-	    else throw new Exception(sprintf('invalid reference: %s', $data));
-	}
-	$path = sprintf('%s/packed-refs', $this->dir);
-	if (file_exists($path))
-	{
-	    $head = NULL;
-	    $f = fopen($path, 'rb');
-	    flock($f, LOCK_SH);
-	    while ($head === NULL && ($line = fgets($f)) !== FALSE)
-	    {
-		if ($line{0} == '#')
-		    continue;
-		$parts = explode(' ', trim($line));
-		if (count($parts) == 2 && $parts[1] == $ref)
-		    $head = sha1_bin($parts[0]);
-	    }
-	    fclose($f);
-	    if ($head !== NULL)
-		return $head;
-	}
-	throw new Exception(sprintf('no such branch: %s', $ref));
+        if (is_valid_sha1($ref)) return sha1_bin($ref);
+        if (!($r = $this->getRef("$ref")))
+        if (!($r = $this->getRef("refs/$ref")))
+        if (!($r = $this->getRef("refs/tags/$ref")))
+        if (!($r = $this->getRef("refs/heads/$ref")))
+        if (!($r = $this->getRef("refs/remotes/$ref")))
+        if (!($r = $this->getRef("refs/remotes/$ref/HEAD")))
+            throw new Exception(sprintf('bad reference: %s', $ref));
+        return $r;
     }
 
     /**
