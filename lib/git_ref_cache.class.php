@@ -119,6 +119,7 @@ class GitRefCache
             {
                 if (isset($this->brefs[$value])) //reference is just bad
                 {
+                    $this->brefs[$key] = true;
                     unset($this->srefs[$key]);
                 } elseif (isset($this->refs[$value])) //reference can be resolved now
                 {
