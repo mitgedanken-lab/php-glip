@@ -74,6 +74,7 @@ class Git
     const OBJ_TAG = 4;
     const OBJ_OFS_DELTA = 6;
     const OBJ_REF_DELTA = 7;
+    const NULL_HASH = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
     static public function getTypeID($name)
     {
