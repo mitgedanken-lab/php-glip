@@ -285,7 +285,7 @@ class GitTree extends GitObject
             {
                 $node = $a_files[$a];
                 if ($node->is_dir)
-                    foreach (self::MyTreeDifff($a_tree->repo->getObject($node->object),array()) as $entry => $diffline)
+                    foreach (self::diffTree($a_tree->repo->getObject($node->object),array()) as $entry => $diffline)
                         $changes[$node->name . '/' . $entry] = $diffline;
                 else
                     $changes[$node->name] = self::diffTreeLine($node->mode,0,$node->object,Git::NULL_HASH,self::TREEDIFF_REMOVED);
@@ -294,7 +294,7 @@ class GitTree extends GitObject
             {
                 $node = $b_files[$b];
                 if ($node->is_dir)
-                    foreach (self::MyTreeDifff(array(),$b_tree->repo->getObject($node->object)) as $entry => $diffline)
+                    foreach (self::diffTree(array(),$b_tree->repo->getObject($node->object)) as $entry => $diffline)
                         $changes[$node->name . '/' . $entry] = $diffline;
                 else
                     $changes[$node->name] = self::diffTreeLine(0,$node->mode,Git::NULL_HASH,$node->object,self::TREEDIFF_ADDED);
@@ -312,17 +312,17 @@ class GitTree extends GitObject
                        $changes[$name] = self::diffTreeLine($a_node->mode,$b_node->mode,$a_node->object,$b_node->object,self::TREEDIFF_CHANGED);
                     } elseif ($a_node->is_dir && !$b_node->is_dir) //directory has removed, file with same name has added
                     {
-                        foreach (self::MyTreeDifff($a_tree->repo->getObject($a_node->object),array()) as $entry => $diffline)
+                        foreach (self::diffTree($a_tree->repo->getObject($a_node->object),array()) as $entry => $diffline)
                             $changes[$name . '/' . $entry] = $diffline;
                         $changes[$name] = self::diffTreeLine(0,$b_node->mode,Git::NULL_HASH,$b_node->object,self::TREEDIFF_ADDED);
                     } elseif (!$a_node->is_dir && $b_node->is_dir) //file has removed, directory with same name has added
                     {
                         $changes[$name] = self::diffTreeLine($a_node->mode,0,$a_node->object,Git::NULL_HASH,self::TREEDIFF_REMOVED);
-                        foreach (self::MyTreeDifff(array(),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
+                        foreach (self::diffTree(array(),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
                             $changes[$name . '/' . $entry] = $diffline;
                     } else //dirctory contents has changed
                     {
-                        foreach (self::MyTreeDifff($a_tree->repo->getObject($a_node->object),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
+                        foreach (self::diffTree($a_tree->repo->getObject($a_node->object),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
                             $changes[$name . '/' . $entry] = $diffline;
                     }
                 }
