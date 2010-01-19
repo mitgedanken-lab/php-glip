@@ -1,7 +1,7 @@
 <?php
 /*
  * Copyright (C) 2008, 2009 Patrik Fimml
- * modified by Michael Vigovsky (C) 2009
+ * modified by Michael Vigovsky (C) 2010
  *
  * This file is part of glip.
  *
@@ -257,6 +257,7 @@ class Git
                 if ($opcode & 0x10) $len = ord($delta{$pos++});
                 if ($opcode & 0x20) $len |= ord($delta{$pos++}) <<  8;
                 if ($opcode & 0x40) $len |= ord($delta{$pos++}) << 16;
+                if ($len == 0) $len = 0x10000;
                 $r .= substr($base, $off, $len);
             }
             else
@@ -288,7 +289,7 @@ class Git
         for ($i = 4; $c & 0x80; $i += 7)
         {
             $c = ord(fgetc($pack));
-            $size |= ($c << $i);
+            $size |= (($c & 0x7F) << $i);
         }
 
         /* compare sha1_file.c:1608 unpack_entry */
