@@ -234,7 +234,7 @@ class Git
      * @param $base (string) the sequence to patch
      * @returns (string) the patched byte sequence
      */
-    protected function applyDelta($delta, $base)
+    public static function applyDelta($delta, $base)
     {
         $pos = 0;
 
@@ -332,7 +332,7 @@ class Git
             assert($base_offset >= 0);
             list($type, $base) = $this->unpackObject($pack, $base_offset);
 
-            $data = $this->applyDelta($delta, $base);
+            $data = self::applyDelta($delta, $base);
         }
         else if ($type == Git::OBJ_REF_DELTA)
         {
@@ -342,7 +342,7 @@ class Git
             // $size is the length of the uncompressed delta
             $delta = gzuncompress(fread($pack, $size+512), $size);
 
-            $data = $this->applyDelta($delta, $base);
+            $data = self::applyDelta($delta, $base);
         }
         else
             throw new Exception(sprintf('object of unknown type %d', $type));
