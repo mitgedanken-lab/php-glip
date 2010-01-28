@@ -45,7 +45,7 @@ class GitIndexPack
         $this->repo = $repo;
 
         // different PHP versions have different endianness of adler32 checksum
-        $adler = hash("adler32","");
+        $adler = hash("adler32", "");
         if ($adler == "00000001")
         {
             $this->reverse_adler = false;
@@ -61,27 +61,28 @@ class GitIndexPack
     protected function getByte()
     {
         $c = fgetc($this->f);
-        hash_update($this->hash,$c);
+        hash_update($this->hash, $c);
         return ord($c);
     }
 
     protected function getBytes($count)
     {
-        $s = fread($this->f,$count);
-        hash_update($this->hash,$s);
+        $s = fread($this->f, $count);
+        hash_update($this->hash, $s);
         return $s;
     }
 
     protected function writeInt32($i)
     {
-        $s = pack("N",$i);
-        fwrite($this->f,$s);
-        hash_update($this->hash,$s);
+        $s = pack("N", $i);
+        fwrite($this->f, $s);
+        hash_update($this->hash, $s);
     }
+
     protected function writeBytes($s)
     {
-        fwrite($this->f,$s);
-        hash_update($this->hash,$s);
+        fwrite($this->f, $s);
+        hash_update($this->hash, $s);
     }
 
     protected function addObject($obj, $data)
@@ -105,7 +106,7 @@ class GitIndexPack
         $type = ($c >> 4) & 0x07;
         if ($type == 0)
             throw new Exception("Invalid object type");
-        $size = $c & 0x0F;
+        $size = $c & 0x0f;
         $shift = 4;
         while ($c & 0x80)
         {
@@ -150,18 +151,18 @@ class GitIndexPack
         }
         $zsize = strpos($buf, $checksum);
         assert($zsize !== false);
-        $zsize+=4; // add size of adler32 checksum itself
+        $zsize += 4; // add size of adler32 checksum itself
 
         // update hash of the the pack because we used regular fread() instead of $this->getBytes()
-        hash_update($this->hash,substr($buf,0,$zsize));
+        hash_update($this->hash, substr($buf, 0, $zsize));
         unset($buf);
         // set file cursor as if we read only $zsize bytes from zlib stream
-        fseek($this->f,$zpos+$zsize);
+        fseek($this->f, $zpos + $zsize);
 
         $pobj = new PackObj;
-        $pobj->type = $type;
-        $pobj->pos = $pos;
-        $pobj->zpos = $zpos;
+        $pobj->type  = $type;
+        $pobj->pos   = $pos;
+        $pobj->zpos  = $zpos;
         $pobj->zsize = $zsize;
 
         if ($type == Git::OBJ_REF_DELTA)
@@ -175,7 +176,7 @@ class GitIndexPack
             $this->unresolved_offs[$bpos][] = $pobj;
         } else
         {
-            $this->addObject($pobj,$data);
+            $this->addObject($pobj, $data);
         }
         unset($data);
         return $pobj;
@@ -188,20 +189,20 @@ class GitIndexPack
         if ($refs === null && $offs === null) return; // nothing to resolve
         if ($data === null)
         {
-            fseek($this->f,$obj->zpos);
-            $data = gzuncompress(fread($this->f,$obj->zsize));
+            fseek($this->f, $obj->zpos);
+            $data = gzuncompress(fread($this->f, $obj->zsize));
         }
         if ($refs !== null)
         {
             foreach ($refs as $deltaobj)
             {
-                fseek($this->f,$deltaobj->zpos);
-                $delta = gzuncompress(fread($this->f,$deltaobj->zsize));
-                $newdata = Git::applyDelta($delta,$data);
+                fseek($this->f, $deltaobj->zpos);
+                $delta = gzuncompress(fread($this->f, $deltaobj->zsize));
+                $newdata = Git::applyDelta($delta, $data);
                 unset($delta);
                 $deltaobj->type = $obj->type;
-                $newhash = $this->addObject($deltaobj,$newdata);
-                $this->resolveDeltas($newhash,$deltaobj,$newdata);
+                $newhash = $this->addObject($deltaobj, $newdata);
+                $this->resolveDeltas($newhash,$deltaobj, $newdata);
                 unset($newdata);
             }
             unset($this->unresolved_hash[$hash]);
@@ -210,13 +211,13 @@ class GitIndexPack
         {
             foreach ($offs as $deltaobj)
             {
-                fseek($this->f,$deltaobj->zpos);
-                $delta = gzuncompress(fread($this->f,$deltaobj->zsize));
-                $newdata = Git::applyDelta($delta,$data);
+                fseek($this->f, $deltaobj->zpos);
+                $delta = gzuncompress(fread($this->f, $deltaobj->zsize));
+                $newdata = Git::applyDelta($delta, $data);
                 unset($delta);
                 $deltaobj->type = $obj->type;
-                $newhash = $this->addObject($deltaobj,$newdata);
-                $this->resolveDeltas($newhash,$deltaobj,$newdata);
+                $newhash = $this->addObject($deltaobj, $newdata);
+                $this->resolveDeltas($newhash, $deltaobj, $newdata);
                 unset($newdata);
             }
             unset($this->unresolved_offs[$obj->pos]);
@@ -242,14 +243,14 @@ class GitIndexPack
             $obj = $this->readObject();
 
         // Check pack sha1 sum
-        $pack_hash = hash_final($this->hash,true);
-        $pack_hash_check = fread($this->f,20);
+        $pack_hash = hash_final($this->hash, true);
+        $pack_hash_check = fread($this->f, 20);
         if ($pack_hash !== $pack_hash_check)
             throw new Exception("Invalid pack checksum");
 
         // Resolve deltas
         foreach ($this->objects as $hash => $obj)
-            $this->resolveDeltas($hash,$obj);
+            $this->resolveDeltas($hash, $obj);
 
         fclose($this->f);
 
@@ -261,13 +262,13 @@ class GitIndexPack
         foreach ($this->objects as $hash => $obj)
         {
             $fanout[ord($hash{0})]++;
-            hash_update($h,$hash);
+            hash_update($h, $hash);
         }
         for ($i = 1; $i < 256; $i++) $fanout[$i] += $fanout[$i-1];
         $packname = hash_final($h);
 
         // Rename the temporary pack file and write index (at this time only index v1 supported)
-        rename($filename,sprintf('%s/objects/pack/pack-%s.pack', $this->repo->dir, $packname));//
+        rename($filename, sprintf('%s/objects/pack/pack-%s.pack', $this->repo->dir, $packname));
         $this->f = fopen(sprintf('%s/objects/pack/pack-%s.idx', $this->repo->dir, $packname), "wb");
         if (!$this->f)
             throw new Exception("Cannot open index file");
@@ -287,8 +288,8 @@ class GitIndexPack
         // Write original pack hashsum
         $this->writeBytes($pack_hash);
         // Write index hashsum
-        $idx_hash = hash_final($this->hash,true);
-        fwrite($this->f,$idx_hash);
+        $idx_hash = hash_final($this->hash, true);
+        fwrite($this->f, $idx_hash);
         fclose($this->f);
     }
 }
