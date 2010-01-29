@@ -111,7 +111,8 @@ class Git
 	$dh = opendir(sprintf('%s/objects/pack', $this->dir));
 	while (($entry = readdir($dh)) !== FALSE)
 	    if (preg_match('#^pack-([0-9a-fA-F]{40})\.idx$#', $entry, $m))
-		$this->packs[] = sha1_bin($m[1]);
+		if (file_exists(sprintf('%s/objects/pack/pack-%s.pack', $this->dir,$m[1])))
+		    $this->packs[] = sha1_bin($m[1]);
     }
 
     /**
@@ -359,7 +360,7 @@ class Git
      * @returns (array) an array consisting of the object type (int) and the
      * binary representation of the object (string)
      */
-    protected function getRawObject($object_name)
+    public function getRawObject($object_name)
     {
         static $cache = array();
         /* FIXME allow limiting the cache to a certain size */

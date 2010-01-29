@@ -76,13 +76,33 @@ class GitIndexPack
     {
         $s = pack("N", $i);
         fwrite($this->f, $s);
-        hash_update($this->hash, $s);
+        if (isset($this->hash)) hash_update($this->hash, $s);
     }
 
     protected function writeBytes($s)
     {
         fwrite($this->f, $s);
-        hash_update($this->hash, $s);
+        if (isset($this->hash)) hash_update($this->hash, $s);
+    }
+
+    protected function writeObject($type, $data)
+    {
+        $size = strlen($data);
+        if ($size<16)
+        {
+            $this->writeBytes(chr(($type << 4) | $size));
+        } else
+        {
+            $this->writeBytes(chr(($type << 4) | ($size & 0x0f) | 0x80));
+            $size >>= 4;
+            while ($size >= 0x80)
+            {
+                $this->writeBytes(chr($size & 0x7f | 0x80));
+                $size >>= 7;
+            }
+            $this->writeBytes(chr($size));
+        }
+        $this->writeBytes(gzcompress($data));
     }
 
     protected function addObject($obj, $data)
@@ -94,6 +114,8 @@ class GitIndexPack
         hash_update($hash, "\0");
         hash_update($hash, $data);
         $hash = hash_final($hash, true);
+        if (isset($this->objects[$hash]))
+             throw new Exception(sprintf("duplicate object %s\n", sha1_hex($hash)));
         $this->objects[$hash] = $obj;
         return $hash;
     }
@@ -133,7 +155,7 @@ class GitIndexPack
                 throw new Exception("Invalid delta offset");
         }
         $zpos = ftell($this->f);
-        $buf = fread($this->f, $size+512);
+        $buf = fread($this->f, $size + 512);
         $data = @gzuncompress($buf);
         if ($data === false)
                 throw new Exception("Failed to uncompress object data");
@@ -182,10 +204,25 @@ class GitIndexPack
         return $pobj;
     }
 
+    protected function resolveObjs($objs, $baseobj, &$data)
+    {
+        foreach ($objs as $deltaobj)
+        {
+            fseek($this->f, $deltaobj->zpos);
+            $delta = gzuncompress(fread($this->f, $deltaobj->zsize));
+            $newdata = Git::applyDelta($delta, $data);
+            unset($delta);
+            $deltaobj->type = $baseobj->type;
+            $newhash = $this->addObject($deltaobj, $newdata);
+            $this->resolveDeltas($newhash, $deltaobj, $newdata);
+            unset($newdata);
+        }
+    }
+
     protected function resolveDeltas($hash, $obj, $data = null)
     {
-        $refs = $this->unresolved_hash[$hash];
-        $offs = $this->unresolved_offs[$obj->pos];
+        $refs = isset($this->unresolved_hash[$hash])?$this->unresolved_hash[$hash]:null;
+        $offs = isset($this->unresolved_offs[$obj->pos])?$this->unresolved_offs[$obj->pos]:null;
         if ($refs === null && $offs === null) return; // nothing to resolve
         if ($data === null)
         {
@@ -194,41 +231,22 @@ class GitIndexPack
         }
         if ($refs !== null)
         {
-            foreach ($refs as $deltaobj)
-            {
-                fseek($this->f, $deltaobj->zpos);
-                $delta = gzuncompress(fread($this->f, $deltaobj->zsize));
-                $newdata = Git::applyDelta($delta, $data);
-                unset($delta);
-                $deltaobj->type = $obj->type;
-                $newhash = $this->addObject($deltaobj, $newdata);
-                $this->resolveDeltas($newhash,$deltaobj, $newdata);
-                unset($newdata);
-            }
+            $this->resolveObjs($refs, $obj, $data);
             unset($this->unresolved_hash[$hash]);
         }
         if ($offs !== null)
         {
-            foreach ($offs as $deltaobj)
-            {
-                fseek($this->f, $deltaobj->zpos);
-                $delta = gzuncompress(fread($this->f, $deltaobj->zsize));
-                $newdata = Git::applyDelta($delta, $data);
-                unset($delta);
-                $deltaobj->type = $obj->type;
-                $newhash = $this->addObject($deltaobj, $newdata);
-                $this->resolveDeltas($newhash, $deltaobj, $newdata);
-                unset($newdata);
-            }
+            $this->resolveObjs($offs, $obj, $data);
             unset($this->unresolved_offs[$obj->pos]);
         }
     }
 
-    public function indexPack($filename)
+    public function indexPack($filename, $fix_thin = true)
     {
-        $this->f = fopen($filename, "rb");
+        $this->f = fopen($filename, "r+b");
         if (!$this->f)
             throw new Exception("Cannot open file $filename");
+        flock($this->f, LOCK_EX);
 
         $this->hash = hash_init("sha1");
 
@@ -243,6 +261,7 @@ class GitIndexPack
             $obj = $this->readObject();
 
         // Check pack sha1 sum
+        $fixpos = ftell($this->f);
         $pack_hash = hash_final($this->hash, true);
         $pack_hash_check = fread($this->f, 20);
         if ($pack_hash !== $pack_hash_check)
@@ -251,6 +270,50 @@ class GitIndexPack
         // Resolve deltas
         foreach ($this->objects as $hash => $obj)
             $this->resolveDeltas($hash, $obj);
+
+        if (count($this->unresolved_hash) !== 0 && $fix_thin) // pack is thin
+        {
+            unset($this->hash);
+            foreach ($this->unresolved_hash as $hash => $objs)
+            {
+                try
+                {
+                    list($type, $data) = $this->repo->getRawObject($hash);
+                } catch (Exception $e)
+                {
+                    continue;
+                }
+                // Create new PackObj
+                $newobj = new PackObj;
+                $newobj->type = $type;
+                $newobj->pos = $fixpos;
+                // Write object to the file
+                fseek($this->f, $fixpos);
+                $this->writeObject($type, $data);
+                $fixpos = ftell($this->f);
+                // Add object to index
+                $newhash = $this->addObject($newobj, $data);
+                assert($newhash === $hash);
+                //resolve child deltas
+                $this->resolveObjs($objs, $newobj, $data);
+                unset($data);
+                unset($this->unresolved_hash[$hash]);
+            }
+            // fix count of objects in the pack
+            fseek($this->f, 8);
+            $this->writeInt32(count($this->objects));
+            // recalculate hash of entire pack
+            ftruncate($this->f, $fixpos);
+            fseek($this->f, 0);
+            $newhash = hash_init("sha1");
+            while (!feof($this->f))
+                hash_update($newhash, fread($this->f, 0x10000));
+            $pack_hash = hash_final($newhash, true);
+            fwrite($this->f, $pack_hash);
+        }
+
+        if (count($this->unresolved_hash) !== 0 || count($this->unresolved_offs) !== 0)
+            throw new Exception("Cannot resolve deltas");
 
         fclose($this->f);
 
