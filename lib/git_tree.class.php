@@ -251,5 +251,86 @@ class GitTree extends GitObject
 
         return $changes;
     }
+
+    static protected function diffTreeLine($old_mode,$new_mode,$old_obj,$new_obj,$status)
+    {
+        $r = new StdClass;
+        $r->old_mode = $old_mode;
+        $r->new_mode = $new_mode;
+        $r->old_obj = $old_obj;
+        $r->new_obj = $new_obj;
+        $r->status = $status;
+        return $r;
+    }
+
+    static public function diffTree($a_tree, $b_tree)
+    {
+        $changes = array();
+
+        $a_files = $a_tree ? array_values($a_tree->nodes) : array();
+        $b_files = $b_tree ? array_values($b_tree->nodes) : array();
+
+        // by default git trees are already sorted
+        /*sort($a_files);
+        sort($b_files);*/
+        $a = $b = 0;
+
+        while ($a < count($a_files) || $b < count($b_files))
+        {
+            if ($a < count($a_files) && $b < count($b_files))
+                $cmp = strcmp($a_files[$a]->name, $b_files[$b]->name);
+            else
+                $cmp = 0;
+            if ($b >= count($b_files) || $cmp < 0)
+            {
+                $node = $a_files[$a];
+                if ($node->is_dir)
+                    foreach (self::diffTree($a_tree->repo->getObject($node->object),array()) as $entry => $diffline)
+                        $changes[$node->name . '/' . $entry] = $diffline;
+                else
+                    $changes[$node->name] = self::diffTreeLine($node->mode,0,$node->object,Git::NULL_HASH,self::TREEDIFF_REMOVED);
+                $a++;
+            } elseif ($a >= count($a_files) || $cmp > 0)
+            {
+                $node = $b_files[$b];
+                if ($node->is_dir)
+                    foreach (self::diffTree(array(),$b_tree->repo->getObject($node->object)) as $entry => $diffline)
+                        $changes[$node->name . '/' . $entry] = $diffline;
+                else
+                    $changes[$node->name] = self::diffTreeLine(0,$node->mode,Git::NULL_HASH,$node->object,self::TREEDIFF_ADDED);
+                $b++;
+            } else
+            {
+                $a_node = $a_files[$a];
+                $b_node = $b_files[$b];
+                if ($a_node->object != $b_node->object || $a_node->mode != $b_node->mode)
+                {
+                    assert($a_node->name === $b_node->name);
+                    $name = $a_node->name;
+                    if (!$a_node->is_dir && !$b_node->is_dir) //file has changed
+                    {
+                       $changes[$name] = self::diffTreeLine($a_node->mode,$b_node->mode,$a_node->object,$b_node->object,self::TREEDIFF_CHANGED);
+                    } elseif ($a_node->is_dir && !$b_node->is_dir) //directory has removed, file with same name has added
+                    {
+                        foreach (self::diffTree($a_tree->repo->getObject($a_node->object),array()) as $entry => $diffline)
+                            $changes[$name . '/' . $entry] = $diffline;
+                        $changes[$name] = self::diffTreeLine(0,$b_node->mode,Git::NULL_HASH,$b_node->object,self::TREEDIFF_ADDED);
+                    } elseif (!$a_node->is_dir && $b_node->is_dir) //file has removed, directory with same name has added
+                    {
+                        $changes[$name] = self::diffTreeLine($a_node->mode,0,$a_node->object,Git::NULL_HASH,self::TREEDIFF_REMOVED);
+                        foreach (self::diffTree(array(),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
+                            $changes[$name . '/' . $entry] = $diffline;
+                    } else //dirctory contents has changed
+                    {
+                        foreach (self::diffTree($a_tree->repo->getObject($a_node->object),$b_tree->repo->getObject($b_node->object)) as $entry => $diffline)
+                            $changes[$name . '/' . $entry] = $diffline;
+                    }
+                }
+                $a++;
+                $b++;
+            }
+        }
+        return $changes;
+    }
 }
 
