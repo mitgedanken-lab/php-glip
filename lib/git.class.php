@@ -117,6 +117,32 @@ class Git
                     $this->packs[] = sha1_bin($m[1]);
             closedir($dh);
         }
+
+        $this->alternates = array();
+        // Check for two sources of alternative repositories to borrow objects
+        // from: the GIT_ALTERNATE_OBJECT_DIRECTORIES environment variable
+        // a ';' separated list of directories and the .git/objects/info/alternates
+        // file, a LF separated list of directories.
+        if ($directories = getenv('GIT_ALTERNATE_OBJECT_DIRECTORIES')) {
+                $this->alternates = explode(';', $directories);
+        }
+        $alternate_file = sprintf('%s/objects/info/alternates', $this->dir);
+        if (file_exists($alternate_file)) {
+                $this->alternates = array_merge($this->alternates, explode("\n", file_get_contents($alternate_file)));
+        }
+
+        // We currently support only references to "proper" git repositories,
+        // supporting raw object stores would require refactoring this class
+        // to allow it.
+        foreach ($this->alternates as $k => $alternate) {
+                if (preg_match('@^(.*)/objects/?$@', trim($alternate), $matches)) {
+                        $this->alternates[$k] = $matches[1];
+                }
+                else {
+                        unset($this->alternates[$k]);
+                }
+        }
+
     }
 
     /**
@@ -397,8 +423,20 @@ class Git
             $r = $this->unpackObject($pack, $object_offset);
             fclose($pack);
 	}
-        else
+
+        // Try alternate repositories.
+        foreach ($this->alternates as $alternate_dir) {
+                try {
+                        $alternate_git = new Git($alternate_dir);
+                        $r = $alternate_git->getRawObject($object_name);
+                        break;
+                }
+                catch (Exception $e) {}
+        }
+
+        if (!isset($r))
             throw new Exception(sprintf('object not found: %s', sha1_hex($object_name)));
+
         $cache[$object_name] = $r;
         return $r;
     }
