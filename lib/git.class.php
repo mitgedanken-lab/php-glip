@@ -1,6 +1,7 @@
 <?php
 /*
  * Copyright (C) 2008, 2009 Patrik Fimml
+ * modified by Michael Vigovsky (C) 2010
  *
  * This file is part of glip.
  *
@@ -23,6 +24,8 @@ require_once('git_object.class.php');
 require_once('git_blob.class.php');
 require_once('git_commit.class.php');
 require_once('git_commit_stamp.class.php');
+require_once('git_tag.class.php');
+require_once('git_ref_cache.class.php');
 require_once('git_tree.class.php');
 
 /**
@@ -49,6 +52,18 @@ function sha1_hex($bin)
     return bin2hex($bin);
 }
 
+/**
+ * @relates Git
+ * @brief Checks if a hex line is a valid SHA-1 hash.
+ *
+ * @param $hex (string) The hash in hexadecimal representation.
+ * @returns (bool) true if a hex-string is valid SHA-1 hash.
+ */
+function is_valid_sha1($hex)
+{
+    return preg_match("/^[0-9a-fA-F]{40}$/",$hex)==1;
+}
+
 class Git
 {
     public $dir;
@@ -60,6 +75,7 @@ class Git
     const OBJ_TAG = 4;
     const OBJ_OFS_DELTA = 6;
     const OBJ_REF_DELTA = 7;
+    const NULL_HASH = "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
     static public function getTypeID($name)
     {
@@ -101,6 +117,32 @@ class Git
                     $this->packs[] = sha1_bin($m[1]);
             closedir($dh);
         }
+
+        $this->alternates = array();
+        // Check for two sources of alternative repositories to borrow objects
+        // from: the GIT_ALTERNATE_OBJECT_DIRECTORIES environment variable
+        // a ';' separated list of directories and the .git/objects/info/alternates
+        // file, a LF separated list of directories.
+        if ($directories = getenv('GIT_ALTERNATE_OBJECT_DIRECTORIES')) {
+                $this->alternates = explode(';', $directories);
+        }
+        $alternate_file = sprintf('%s/objects/info/alternates', $this->dir);
+        if (file_exists($alternate_file)) {
+                $this->alternates = array_merge($this->alternates, explode("\n", file_get_contents($alternate_file)));
+        }
+
+        // We currently support only references to "proper" git repositories,
+        // supporting raw object stores would require refactoring this class
+        // to allow it.
+        foreach ($this->alternates as $k => $alternate) {
+                if (preg_match('@^(.*)/objects/?$@', trim($alternate), $matches)) {
+                        $this->alternates[$k] = $matches[1];
+                }
+                else {
+                        unset($this->alternates[$k]);
+                }
+        }
+
     }
 
     /**
@@ -223,7 +265,7 @@ class Git
      * @param $base (string) the sequence to patch
      * @returns (string) the patched byte sequence
      */
-    protected function applyDelta($delta, $base)
+    public static function applyDelta($delta, $base)
     {
         $pos = 0;
 
@@ -321,7 +363,7 @@ class Git
             assert($base_offset >= 0);
             list($type, $base) = $this->unpackObject($pack, $base_offset);
 
-            $data = $this->applyDelta($delta, $base);
+            $data = self::applyDelta($delta, $base);
         }
         else if ($type == Git::OBJ_REF_DELTA)
         {
@@ -331,7 +373,7 @@ class Git
             // $size is the length of the uncompressed delta
             $delta = gzuncompress(fread($pack, $size+512), $size);
 
-            $data = $this->applyDelta($delta, $base);
+            $data = self::applyDelta($delta, $base);
         }
         else
             throw new Exception(sprintf('object of unknown type %d', $type));
@@ -348,7 +390,7 @@ class Git
      * @returns (array) an array consisting of the object type (int) and the
      * binary representation of the object (string)
      */
-    protected function getRawObject($object_name)
+    public function getRawObject($object_name)
     {
         static $cache = array();
         /* FIXME allow limiting the cache to a certain size */
@@ -381,8 +423,20 @@ class Git
             $r = $this->unpackObject($pack, $object_offset);
             fclose($pack);
 	}
-        else
+
+        // Try alternate repositories.
+        foreach ($this->alternates as $alternate_dir) {
+                try {
+                        $alternate_git = new Git($alternate_dir);
+                        $r = $alternate_git->getRawObject($object_name);
+                        break;
+                }
+                catch (Exception $e) {}
+        }
+
+        if (!isset($r))
             throw new Exception(sprintf('object not found: %s', sha1_hex($object_name)));
+
         $cache[$object_name] = $r;
         return $r;
     }
@@ -400,6 +454,49 @@ class Git
 	$object->unserialize($data);
 	assert($name == $object->getName());
 	return $object;
+    }
+
+    /**
+     * @brief List all refs in repository.
+     *
+     * @returns (array) associative array of where key is ref name
+     * and value is binary SHA1.
+     */
+    public function getRefs()
+    {
+        if (!isset($this->refcache)) $this->refcache = new GitRefCache($this->dir);
+        return $this->refcache->refs;
+    }
+
+    /**
+     * @brief Get a single ref.
+     *
+     * @param $ref (string) The ref to look up.
+     * @returns (string) binary SHA1 of reference or false if it is not found.
+     */
+    public function getRef($ref)
+    {
+        if (!isset($this->refcache)) $this->refcache = new GitRefCache($this->dir);
+        return $this->refcache->getRef($ref);
+    }
+
+    /**
+     * @brief Parses a revision reference or hex sha1
+     *
+     * @param $branch (string) The ref to look up, defaulting to @em HEAD.
+     * @returns (string) Binary SHA1 of parsed reference.
+     */
+    public function revParse($ref='HEAD')
+    {
+        if (is_valid_sha1($ref)) return sha1_bin($ref);
+        if (!($r = $this->getRef("$ref")))
+        if (!($r = $this->getRef("refs/$ref")))
+        if (!($r = $this->getRef("refs/tags/$ref")))
+        if (!($r = $this->getRef("refs/heads/$ref")))
+        if (!($r = $this->getRef("refs/remotes/$ref")))
+        if (!($r = $this->getRef("refs/remotes/$ref/HEAD")))
+            throw new Exception(sprintf('bad reference: %s', $ref));
+        return $r;
     }
 
     /**
