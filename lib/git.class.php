@@ -531,5 +531,16 @@ class Git
 	}
 	throw new Exception(sprintf('no such branch: %s', $branch));
     }
+    
+    /**
+     * @brief Look up a repo description
+     *
+     * @param $dir (string) The directory where to look for the description file (.git folder of current repo)
+     * @returns (string) The text inside the description file.
+     */
+    public function getDescription($dir){
+    	$desc = file_get_contents($dir.'/description');
+    	return $desc; 	
+    }
 }
 
