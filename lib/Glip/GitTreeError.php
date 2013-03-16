@@ -1,6 +1,7 @@
 <?php
+
 /*
- * Copyright (C) 2008 Patrik Fimml
+ * Copyright (C) 2008, 2009 Patrik Fimml, Sjoerd de Jong
  *
  * This file is part of glip.
  *
@@ -18,28 +19,6 @@
  * along with glip.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once('git_object.class.php');
+namespace Glip;
 
-class GitBlob extends GitObject
-{
-    /**
-     * @brief The data contained in this blob.
-     */
-    public $data = NULL;
-
-    public function __construct($repo)
-    {
-	parent::__construct($repo, Git::OBJ_BLOB);
-    }
-
-    public function _unserialize($data)
-    {
-	$this->data = $data;
-    }
-
-    public function _serialize()
-    {
-	return $this->data;
-    }
-}
-
+class GitTreeError extends \Exception {}
