@@ -1,21 +1,12 @@
-***Development has moved to http://github.com/xaav/GitBundle.***
+## About ##
 
 glip is a Git Library In PHP. It allows you to access bare git repositories
-from PHP scripts, even without having git installed. The project's homepage is
+from PHP scripts, even without having git installed. This project is a fork of
+Patrik Fimml's original one that can still be found a the project's homepage
 located at <http://fimml.at/glip>.
 
-The glip-devel mailing list at <glip-devel@fimml.at> is intended for both users
-and developers to discuss development and issues with the library. The mailing
-list archives can be found at <http://lists.fimml.at/glip-devel/>.
+This project also includes some changes made by the community at large.
 
-
-glip was formerly part of eWiki, a wiki software written in PHP using git as
-version control backend. You can get more information on eWiki from
-<http://fimml.at/ewiki>.
-
-glip was split off eWiki on May 31, 2009. An attempt was made to preserve
-commit history by using git filter-branch; this also means that commit
-messages before May 31, 2009 may seem weird (esp. wrt file names).
 
 ## Usage ##
 
@@ -40,4 +31,16 @@ $repo = new Git('project/.git');
 ```
 
 
-***Anyone who wants to contribute to this project is more than welcome to send a pull request***
+## Contributing ##
+
+Please feel free to help make glip stable, fast and easy to use, based on the KISS principle.
+I've created a public wiki on Github and activated the issue system. Feel free to send pull
+requests.
+
+
+## Project history ##
+
+The original glip library was split off eWiki on May 31, 2009. An attempt was
+made to preserve commit history by using git filter-branch; this also means that
+commit messages before May 31, 2009 may seem weird (esp. wrt file names).
+
