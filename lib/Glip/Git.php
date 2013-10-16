@@ -429,7 +429,7 @@ class Git implements \ArrayAccess
   public function getObject(SHA $sha)
   {
     list($type, $serialized) = $this->getRawObject($sha);
-    $class = "Git".ucfirst($type);
+    $class = "Glip\Git".ucfirst($type);
     $object = new $class($this, $sha);
     $object->setSerialized($serialized);
     return $object;
