@@ -86,23 +86,9 @@ abstract class GitPathObject extends GitObject
    *
    * @return GitCommit
    **/
-  public function getCommitForLastModification($from)
+  public function getCommitForLastModification(GitCommit $commitTip)
   {
-    $commit = $this->git->getCommitObject($from);
-    $path = $this->getPath($commit);
-
-    $commits = $commit->getHistory();
-    $commits = array_reverse($commits);
-    $r = NULL;
-    $lastblob = $this->getName();
-    foreach ($commits as $commit)
-    {
-        $blobname = $commit[$path];
-        if ($blobname != $lastblob)
-            break;
-        $r = $commit->committer->time;
-    }
-    assert($r !== NULL); /* something is seriously wrong if this happens */
-    return $r;
+    $commits = $this->getHistory($commitTip);
+    return end($commits);
   }
 }
