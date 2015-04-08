@@ -169,7 +169,7 @@ abstract class GitObject implements \Serializable
    **/
   public function getTypeName()
   {
-    $class_path = explode('\', get_class($this));
+    $class_path = explode('\\', get_class($this));
     $real_class = end($class_path);
     return strtolower(substr($real_class,3));
   }
