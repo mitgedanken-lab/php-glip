@@ -76,9 +76,9 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
         $blobs[$path] = $node;
       }
     }
-    ksort($trees);
-    ksort($blobs);
+
     $this->data['nodes'] = array_merge($trees, $blobs);
+    ksort($this->data['nodes']);
 
     foreach ($this->nodes as $name => $node)
     {
