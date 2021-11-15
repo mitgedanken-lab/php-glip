@@ -8,11 +8,20 @@ located at <http://fimml.at/glip>.
 This project also includes some changes made by the community at large.
 
 
+## Installation ##
+
+You can install it from Composer. In your project:
+
+```
+composer require "laurentj/glip"
+```
+
+
 ## Usage ##
 
-Include the autoload file, as shown below:
+Include the autoload file, as shown below, if you didn't install the library with Composer:
 
-```php5
+```php
 <?php
 
 require_once __DIR__.'lib/autoload.php';
@@ -21,7 +30,7 @@ require_once __DIR__.'lib/autoload.php';
 
 Create a new Git repository:
 
-```php5
+```php
 <?php
 
 use Glip\Git

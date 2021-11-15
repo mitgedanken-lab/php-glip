@@ -1,0 +1,59 @@
+{
+  "name": "laurentj/glip",
+  "type": "library",
+  "description": "Git library for PHP",
+  "keywords": [ "git"],
+  "homepage": "",
+  "license": "GPL-2.0-only",
+  "authors": [
+    {
+      "name": "Patrik Fimml",
+      "email": "patrik@fimml.at"
+    },
+    {
+      "name": "Xaav",
+      "email": "xaav@xaav.tk"
+    },
+    {
+      "name": "Michael Vigovsky",
+      "email": "xvmv@mail.ru"
+    },
+    {
+      "name": "Sjoerd de Jong",
+      "email": "sjoerd@weett.nl"
+    },
+    {
+      "name": "Martijn",
+      "email": "martijn.niji@gmail.com"
+    },
+    {
+      "name": "Aria Stewart",
+      "email": "aredridel@nbtsc.org"
+    },
+    {
+      "name": "David Triendl",
+      "email": "david@triendl.name"
+    },
+    {
+      "name": "Matthew Hadley",
+      "email": "matthew.hadley@gmail.com"
+    },
+    {
+      "name": "Laurent Jouanneau",
+      "email": "dev@ljouanneau.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Glip\\" : "lib/Glip/"
+    }
+  },
+  "archive": {
+    "exclude": ["/test", "/doc", "dist.sh", "Doxyfile"]
+  },
+  "minimum-stability": "stable"
+}
+
