@@ -342,7 +342,9 @@ class Git implements \ArrayAccess
       unset($buf);
 
       $base_offset = $object_offset - $offset;
-      assert($base_offset >= 0);
+      if ($base_offset < 0) {
+          throw new \Exception('bad base_offset');
+      }
       list($type, $base) = $this->unpackObject($pack, $base_offset);
 
       $data = $this->applyDelta($delta, $base);
