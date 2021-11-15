@@ -67,7 +67,7 @@ class GitBranch implements \ArrayAccess
         $stashSource[$stashKeyPrefix.$branchName] =& $this->stash;
       }
     }
-    elseif ($stashSource instanceof ArrayAccess)
+    elseif ($stashSource instanceof \ArrayAccess)
     {
       $this->stash =& $stashSource;
     }
@@ -312,11 +312,11 @@ class GitBranch implements \ArrayAccess
 
           if (is_null($this->stash[$key]))
           {
-            unset($object[$file]);
+            unset($object[(string)$file]);
           }
           else
           {
-            $object[$file] = new GitBlob($this->git, null, null, $this->stash[$key]);
+            $object[(string)$file] = new GitBlob($this->git, null, null, $this->stash[$key]);
           }
         }
       }

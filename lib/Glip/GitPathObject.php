@@ -65,7 +65,6 @@ abstract class GitPathObject extends GitObject
     $r = array();
     $commits = $commitTip->getHistory();
     $path = $commitTip->getPath($this);
-    $last = null;
     foreach ($commits as $commit)
     {
       $sha = (string)$commit[$path];

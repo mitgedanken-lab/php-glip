@@ -203,7 +203,7 @@ class Git implements \ArrayAccess
         {
           $off = Binary::fuint32($index);
           $name = fread($index, 20);
-          if ($name === (string)$objectSHA)
+          if ($name === (string)$objectSha)
           {
             /* we found the object */
             fclose($index);
