@@ -4,3 +4,6 @@ doc/html
 /.project
 .idea
 test/unit/temp/
+vendor/
+composer.lock
+.phpunit.result.cache

@@ -1,0 +1,7 @@
+.gitattributes export-ignore
+.gitignore export-ignore
+doc/  export-ignore
+test/ export-ignore
+composer.json export-ignore
+Doxyfile export-ignore
+dist.sh export-ignore
