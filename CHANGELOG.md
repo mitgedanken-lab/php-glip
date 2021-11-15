@@ -4,8 +4,10 @@ CHANGELOG
 ## 1.0.1
 
 * Fix compatibility issues with PHP 7.4
+* Fix serialization of tree objects
 * Fix Namespace of instanciated objects into Git::getObject()
 * Use PHPunit for tests 
+* Improve some doc comments
 
 ## 1.0.0
 
