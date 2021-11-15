@@ -22,16 +22,41 @@ namespace Glip;
 
 abstract class GitObject implements \Serializable
 {
-  protected
-    $git = null,        // the git repository this object belongs to
-    $data = array(),    // the data this object contains
-    $sha = null,        // (SHA) the sha of this object
-    $isLoaded = false,  // (bool) is the object loaded from the git repos?
-    $exists = false,    // (bool) does the object exist (is written) in the git repos?
-    $serialized = null; // (string) containing the serialized version of this object
+  /**
+   * @var Git the git repository this object belongs to
+   */
+  protected $git;
+
+  /**
+   * @var array the data this object contains
+   */
+  protected $data = array();
+
+  /**
+   * @var SHA the sha of this object
+   */
+  protected $sha;
+
+  /**
+   * @var bool is the object loaded from the git repos?
+   */
+  protected $isLoaded = false;
+
+  /**
+   * @var bool does the object exist (is written) in the git repos?
+   */
+  protected $exists = false;
+
+  /**
+   * @var string containing the serialized version of this object
+   */
+  protected $serialized = null;
 
   /**
    * Constructor, takes extra arguments for lazy loading git objects
+   *
+   * @param Git $git the git repository
+   * @param SHA|string $sha the id of the object
    *
    * @return void
    * @author Sjoerd de Jong
@@ -66,6 +91,10 @@ abstract class GitObject implements \Serializable
     $this->serialized = null;
   }
 
+  /**
+   * @param string $serialized the serialized form of the object
+   * @throws \Exception
+   */
   public function setSerialized($serialized)
   {
     if (!is_null($this->serialized))
@@ -75,20 +104,26 @@ abstract class GitObject implements \Serializable
     $this->serialized = $serialized;
   }
 
+  /**
+   * @return Git
+   */
   public function getGit()
   {
     return $this->git;
   }
 
+  /**
+   * @return bool
+   */
   public function isReadOnly()
   {
     return !is_null($this->sha);
   }
 
   /**
-   * @brief Get the object's cached SHA-1 hash value.
+   * Get the object's cached SHA-1 hash value.
    *
-   * @returns (SHA) The hash value (binary sha1).
+   * @returns SHA The hash value (binary sha1).
    */
   public function getSha()
   {
@@ -100,16 +135,25 @@ abstract class GitObject implements \Serializable
     return $this->sha;
   }
 
+  /**
+   * @return bool
+   */
   public function isLoaded()
   {
     return $this->isLoaded;
   }
 
+  /**
+   * @return bool
+   */
   public function exists()
   {
     return $this->exists;
   }
 
+  /**
+   * @return void
+   */
   public function load()
   {
     if (!$this->exists())
@@ -164,7 +208,7 @@ abstract class GitObject implements \Serializable
   /**
    * get the objects type name, either 'blob', 'tree', or 'commit'
    *
-   * @return (string) the type name
+   * @return string the type name
    * @author Sjoerd de Jong
    **/
   public function getTypeName()
@@ -177,7 +221,7 @@ abstract class GitObject implements \Serializable
   /**
    * Get the object's type number
    *
-   * @returns (integer) One of Git::OBJ_COMMIT, Git::OBJ_TREE or GIT::OBJ_BLOB.
+   * @returns integer One of Git::OBJ_COMMIT, Git::OBJ_TREE or GIT::OBJ_BLOB.
    */
   public function getTypeId()
   {
@@ -185,9 +229,9 @@ abstract class GitObject implements \Serializable
   }
 
   /**
-   * @brief Get the string representation of an object.
+   * Get the string representation of an object.
    *
-   * @returns The serialized representation of the object, as it would be
+   * @returns string The serialized representation of the object, as it would be
    * stored by git.
    */
   public function serialize()
@@ -201,12 +245,12 @@ abstract class GitObject implements \Serializable
   abstract protected function _serialize();
 
   /**
-   * @brief Populate this object with values from its string representation.
+   * Populate this object with values from its string representation.
    *
    * Note that the types of $this and the serialized object in $data have to
    * match.
    *
-   * @param $data (string) The serialized representation of an object, as
+   * @param string $data The serialized representation of an object, as
    * it would be stored by git.
    */
   public function unserialize($serialized)
@@ -218,7 +262,7 @@ abstract class GitObject implements \Serializable
    * __tostring prints the git representation of this object
    * please note that is locks the object, as it calls getSha()
    *
-   * @return void
+   * @return string
    * @author Sjoerd de Jong
    **/
   public function __tostring()
@@ -227,8 +271,10 @@ abstract class GitObject implements \Serializable
   }
 
   /**
-   * @brief Write this object in its serialized form to the git repository
+   * Write this object in its serialized form to the git repository
    * given at creation time.
+   *
+   * @return bool true if it is a success
    */
   public function write()
   {
@@ -259,14 +305,15 @@ abstract class GitObject implements \Serializable
     fclose($f);
 
     $this->exists = true;
-    return TRUE;
+    return true;
   }
 
   /**
    * equalTo compares this object to one or an array of other objects. If all
    * objects are the same it returns true
    *
-   * @return (bool) True if all objects are the same
+   * @param object|object[]
+   * @return bool True if all objects are the same
    * @author Sjoerd de Jong
    **/
   public function equalTo($object)

@@ -22,11 +22,18 @@ namespace Glip;
 
 class GitBlob extends GitPathObject
 {
+  /**
+   * @var array
+   */
   protected
     $data = array(
       'data' => null         // The data contained in this blob
-      ),
-    $mode = 0100640;         // The default mode for a BLOB
+      );
+
+  /**
+   * @var int The default mode for a BLOB
+   */
+  protected $mode = 0100640;
 
   public function __construct(Git $git, $sha = null, $mode = null, $data = null)
   {

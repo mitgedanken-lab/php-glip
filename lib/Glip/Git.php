@@ -22,11 +22,25 @@ namespace Glip;
 
 class Git implements \ArrayAccess
 {
-  protected
-    $dir = "",          // (string) location of the git repository
-    $packs = array(),   // (array of SHA) all packs in the repository
-    $branchCache = array(), // (array of GitBranch) cache for branches
-    $stash = array();   // (array of data strings) cache for stash for branches
+  /**
+   * @var string location of the git repository
+   */
+  protected $dir = "";
+
+  /**
+   * @var SHA[] all packs in the repository
+   */
+  protected $packs = array();
+
+  /**
+   * @var GitBranch[] cache for branches
+   */
+  protected $branchCache = array();
+
+  /**
+   * @var string[]  cache for stash for branches
+   */
+  protected $stash = array();
 
   const
     OBJ_NONE      = 0,
@@ -40,7 +54,7 @@ class Git implements \ArrayAccess
   /**
    * Gets the directory of this repository
    *
-   * @return (string) the directory of this git repository
+   * @return string the directory of this git repository
    * @author The Young Shepherd
    **/
   public function getDir()
@@ -51,8 +65,8 @@ class Git implements \ArrayAccess
   /**
    * returns the integer type id of the object
    *
-   * @param (string) $name The name of the object
-   * @return (integer) The type of the object
+   * @param string $name The name of the object
+   * @return integer The type of the object, one of OBJ_* constants
    * @author Sjoerd de Jong
    **/
   static public function getTypeID($name)
@@ -70,8 +84,8 @@ class Git implements \ArrayAccess
   /**
    * returns the type of the object
    *
-   * @param (integer) id of the object
-   * @return (string) type of object
+   * @param integer $id id of the object
+   * @return string type of object
    * @author Sjoerd de Jong
    **/
   static public function getTypeName($id)
@@ -89,8 +103,9 @@ class Git implements \ArrayAccess
   /**
    * Takes a mandatory directory and sets up the internal structure
    *
-   * @param (string) $dir The location of the GIT repository
-   * @param (array) $stashSource An array for storing the cache
+   * @param string $dir The location of the GIT repository
+   * @param array $stashSource An array for storing the cache
+   * @param string $stashKey
    * @return void
    * @author Sjoerd de Jong
    **/
@@ -126,7 +141,11 @@ class Git implements \ArrayAccess
   }
 
   /**
-   * @brief Tries to find $object_name in the fanout table in $f at $offset.
+   * Tries to find $object_name in the fanout table in $f at $offset.
+   *
+   * @param resource $f file resource
+   * @param SHA $object_name
+   * @param integer $offset offset in the file to start to read
    *
    * @return array The range where the object can be located (first possible
    * location and past-the-end location)
@@ -151,10 +170,10 @@ class Git implements \ArrayAccess
   }
 
   /**
-   * @brief Try to find an object in a pack.
+   * Try to find an object in a pack.
    *
-   * @param $object_name (string) name of the object (binary SHA1)
-   * @return (array) an array consisting of the name of the pack (SHA) and
+   * @param SHA $object_name (string) name of the object (binary SHA1)
+   * @return array|null an array consisting of the name of the pack (SHA) and
    * the byte offset inside it, or NULL if not found
    */
   protected function findPackedObject(SHA $objectSha)
@@ -242,11 +261,11 @@ class Git implements \ArrayAccess
   }
 
   /**
-   * @brief Apply the git delta $delta to the byte sequence $base.
+   * Apply the git delta $delta to the byte sequence $base.
    *
-   * @param $delta (string) the delta to apply
-   * @param $base (string) the sequence to patch
-   * @return (string) the patched byte sequence
+   * @param string $delta the delta to apply
+   * @param string $base  the sequence to patch
+   * @return string the patched byte sequence
    */
   protected function applyDelta($delta, $base)
   {
@@ -284,11 +303,11 @@ class Git implements \ArrayAccess
   }
 
   /**
-   * @brief Unpack an object from a pack.
+   * Unpack an object from a pack.
    *
-   * @param $pack (resource) open .pack file
-   * @param $object_offset (integer) offset of the object in the pack
-   * @return (array) an array consisting of the object type name (string) and the
+   * @param resource $pack open .pack file
+   * @param integer $object_offset offset of the object in the pack
+   * @return string[] an array consisting of the object type name (string) and the
    * binary representation of the object (string)
    */
   protected function unpackObject($pack, $object_offset)
@@ -373,12 +392,12 @@ class Git implements \ArrayAccess
   }
 
   /**
-  * @brief Fetch an object in its binary representation by name.
+  * Fetch an object in its binary representation by name.
   *
   * Throws an exception if the object cannot be found.
   *
-  * @param $object_name (string) name of the object (binary SHA1)
-  * @return (array) an array consisting of the object type name (string) and the
+  * @param SHA $object_name  name of the object
+  * @return string[] an array consisting of the object type name (string) and the
   * binary representation of the object (string)
   */
   public function getRawObject(SHA $sha)
@@ -423,10 +442,10 @@ class Git implements \ArrayAccess
   }
 
   /**
-   * @brief Fetch an object in its PHP representation.
+   * Fetch an object in its PHP representation.
    *
-   * @param $sha (SHA) sha of the object (binary SHA1)
-   * @return (GitObject) the object
+   * @param SHA $sha sha of the object
+   * @return GitObject the object
    */
   public function getObject(SHA $sha)
   {
@@ -437,6 +456,10 @@ class Git implements \ArrayAccess
     return $object;
   }
 
+  /**
+   * @param string $branchName the name of branch
+   * @return GitBranch the branch object
+   */
   public function getBranch($branchName = 'master')
   {
     if (!isset($this->branchCache['$branchName']))

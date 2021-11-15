@@ -57,8 +57,8 @@ abstract class GitPathObject extends GitObject
   /**
    * Gets all commits in which this object changed
    *
-   * @param $commitTip The commit from where to start searching
-   * @return array of GitCommit
+   * @param GitCommit $commitTip The commit from where to start searching
+   * @return GitCommit[]
    */
   public function getHistory(GitCommit $commitTip)
   {

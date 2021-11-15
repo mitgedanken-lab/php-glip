@@ -22,14 +22,32 @@ namespace Glip;
 
 class GitBranch implements \ArrayAccess
 {
-  protected
-    $git = null,        // the git repository
-    $branchName = null, // the name of this branch
-    $tipCache = null,   // cache for the tip commit of the branch
-    $stash = array();   // (array of string) stash with mutations
+
+  /**
+   * @var Git the git repository
+   */
+  protected $git;
+
+  /**
+   * @var string the name of this branch
+   */
+  protected $branchName = null;
+
+  /**
+   * @var GitCommit cache for the tip commit of the branch
+   */
+  protected $tipCache = null;
+
+  /**
+   * @var string[] stash with mutations
+   */
+  protected $stash = array();
 
   /**
    * Constructor
+   *
+   * @param Git $git
+   * @param string $branchName
    *
    * @return void
    * @author Sjoerd de Jong
@@ -62,7 +80,7 @@ class GitBranch implements \ArrayAccess
   /**
    * returns the stash of this branch as $path => $data
    *
-   * @return (array) a reference to the current stash
+   * @return array a reference to the current stash
    * @author The Young Shepherd
    **/
   public function &getStash()
@@ -144,9 +162,9 @@ class GitBranch implements \ArrayAccess
   }
 
   /**
-   * @brief get the object at the tip of the branch
+   * get the object at the tip of the branch
    *
-   * @returns (GitCommit) The tip of the branch
+   * @returns GitCommit The tip of the branch
    */
   public function getTip($noCache = false)
   {
@@ -204,11 +222,11 @@ class GitBranch implements \ArrayAccess
   }
 
   /**
-     * openBranch opens and locks the branch for other writing
-     *
-     * @return GitCommit the head commit of the branch or null if empty branch
-     * @author The Young Shepherd
-     **/
+   * openBranch opens and locks the branch for other writing
+   *
+   * @param GitCommit $commit the head commit of the branch
+   * @author The Young Shepherd
+   */
   public function setTip(GitCommit $commit)
   {
     $fBranch = fopen(sprintf('%s/refs/heads/%s', $this->git->getDir(), $this->branchName), 'a+b');
@@ -223,7 +241,8 @@ class GitBranch implements \ArrayAccess
   /**
    * updateTipTo tries to update the tip to the supplied commit
    *
-   * @return return (bool) true on success, (int) problem on failure
+   * @return bool true on success
+   *
    * @author The Young Shepherd
    *
    * @throws TODO should throw exceptions if not a normal commit is possible
@@ -243,7 +262,7 @@ class GitBranch implements \ArrayAccess
   }
 
   /**
-   * Returns if the supplied path exists (implements the ArrayAccess interface)
+   * Returns if the supplied path exists (implements the \ArrayAccess interface)
    *
    * @param  string $index The relative path to the node
    *
@@ -259,9 +278,9 @@ class GitBranch implements \ArrayAccess
   /**
    * Returns the node associated with the supplied path (implements the ArrayAccess interface).
    *
-   * @param  string $index  The path of the object to get
+   * @param  string $path  The path of the object to get
    *
-   * @return GitBlob, GitTree
+   * @return GitBlob|GitTree
    */
   public function offsetGet($path)
   {

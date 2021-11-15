@@ -95,8 +95,8 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
   /**
    * returns the relative path of an object in this
    *
-   * @param $obj (GitPathObject) The object to find the path for
-   * @return GitPath or null if not found
+   * @param GitPathObject $obj The object to find the path for
+   * @return GitPath|null  null if not found
    **/
   public function getPath(GitPathObject $obj)
   {
@@ -106,9 +106,10 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
   }
 
   /**
-   * @brief Recursively list the contents of a tree.
+   * Recursively list the contents of a tree.
    *
-   * @returns (array mapping string to GitPathObject) An array where the keys are
+   * @param bool $listDirs true if it should list directories
+   * @returns GitPathObject[] An array where the keys are
    * paths relative to the current tree, and the values are GitPathObjects of
    * the corresponding blobs in binary representation.
    */
@@ -234,7 +235,7 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
    *
    * @param  GitPath $path  The path of the object to get
    *
-   * @return object at the path, or null if the object does not exist
+   * @return GitObject object at the path, or null if the object does not exist
    */
   public function offsetGet($path)
   {
@@ -269,7 +270,7 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
    * Sets the path to object (implements the ArrayAccess interface).
    *
    * @param string $path
-   * @param string $object
+   * @param GitBlob $object
    *
    */
   public function offsetSet($path, $object)
@@ -366,7 +367,7 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
   /**
    * implements iterator interface
    *
-   * @return void
+   * @return \ArrayIterator
    * @author The Young Shepherd
    **/
   public function getIterator() {
@@ -377,7 +378,7 @@ class GitTree extends GitPathObject implements \ArrayAccess, \IteratorAggregate,
   /**
    * implements countable interface
    *
-   * @return void
+   * @return int
    * @author The Young Shepherd
    **/
   public function count()

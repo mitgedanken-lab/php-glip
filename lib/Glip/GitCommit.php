@@ -30,6 +30,9 @@ namespace Glip;
  **/
 class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \Countable
 {
+  /**
+   * @var array data of a commit
+   */
   protected
     $data = array(
       'tree' => null,         // (GitTree) The tree referenced by this commit
@@ -38,12 +41,18 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
       'committer' => null,    // (GitCommitStamp) The committer of this commit
       'summary' => "",        // (string) Commit summary, i.e. the first line of the commit message
       'detail' => ""          // (string) Everything after the first line of the commit message
-      ),
-    $commitHistory = null;    // cache for history of this object
+      );
+
+  /**
+   * @var GitCommit[] cache for history of this object
+   */
+  protected $commitHistory = null;
 
   /**
    * Constructor, takes extra arguments for lazy loading git objects
    *
+   * @param GitCommit|GitCommit[]|Git
+   * @param SHA|string|null $sha
    * @return void
    * @author Sjoerd de Jong
    **/
@@ -65,6 +74,10 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
     }
   }
 
+  /**
+   * @param string $data
+   * @throws \Exception
+   */
   public function unserialize($data)
   {
   	$lines = explode("\n", $data);
@@ -99,6 +112,9 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
   	$this->data['detail'] = implode("\n", $lines);
   }
 
+  /**
+   * @param string $message
+   */
   public function setMessage($message)
   {
     $message = explode("\n",$message,2);
@@ -106,6 +122,10 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
     $this->detail = isset($message[1]) ? $message[1] : "";
   }
 
+  /**
+   * @return string
+   * @throws \Exception
+   */
   protected function _serialize()
   {
   	$s = sprintf("tree %s\n", $this->tree->getSha()->hex());
@@ -128,8 +148,8 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
   /**
    * returns path of an object
    *
-   * @param $commitTip The commit from where to start searching
-   * @return array of strings for each part of the path, empty array if not found
+   * @param GitPathObject $commitTip The commit from where to start searching
+   * @return string[] each part of the path, empty array if not found
    **/
   public function getPath(GitPathObject $obj)
   {
@@ -137,9 +157,10 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
   }
 
   /**
-   * @brief Get commit history in topological order.
+   * Get commit history in topological order.
    *
-   * @returns (array of GitCommit)
+   * @param GitCommit $commitTip unused (deprecated parameter)
+   * @returns GitCommit[]
    */
   public function getHistory(GitCommit $commitTip = null)
   {
@@ -187,7 +208,7 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
    * writes the object to disc
    * also writes the subtree & parents to disk
    *
-   * @return void
+   * @return bool true if success
    * @author The Young Shepherd
    **/
   public function write()
@@ -225,7 +246,7 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
   /**
    * Returns if the supplied path exists (implements the ArrayAccess interface)
    *
-   * @param  string $index The relative path to the node
+   * @param  string $path The relative path to the node
    *
    * @return bool true if the error exists, false otherwise
    */
@@ -237,7 +258,7 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
   /**
    * Returns the node associated with the supplied path (implements the ArrayAccess interface).
    *
-   * @param  string $index  The path of the object to get
+   * @param  string $path  The path of the object to get
    *
    * @return string
    */
@@ -250,7 +271,7 @@ class GitCommit extends GitObject implements \ArrayAccess, \IteratorAggregate, \
    * Sets the object at path (implements the ArrayAccess interface).
    *
    * @param string $path
-   * @param string $object
+   * @param object $object
    *
    */
   public function offsetSet($path, $object)
