@@ -106,7 +106,7 @@ class GitBranch implements \ArrayAccess
   /**
    * commit commits all changes in the stash to the tip of this branch
    *
-   * @param GitStamp $stamp Stamp for the author&committer of this commit
+   * @param GitCommitStamp $stamp Stamp for the author&committer of this commit
    * @param string $message Summary for this commit
    *
    * @return GitCommit The new commit tip

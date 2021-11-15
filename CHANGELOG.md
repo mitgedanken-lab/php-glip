@@ -1,7 +1,11 @@
 CHANGELOG
 ============
 
+## 1.0.1
 
+* Fix compatibility issues with PHP 7.4
+* Fix Namespace of instanciated objects into Git::getObject()
+* Use PHPunit for tests 
 
 ## 1.0.0
 

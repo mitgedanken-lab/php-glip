@@ -1,120 +1,165 @@
 <?php
-require_once dirname(__FILE__).'/../bootstrap/unit.php';
+use Glip\GitPath;
 
-$t = new lime_test(34, new lime_output_color());
-
-$t->comment('Testing output');
-$a = array('abc','def','ghi');
-$p = new GitPath($a);
-$t->is((string)$p,'abc/def/ghi',
-  '__tostring returns string');
-$t->is((string)$p->getTreePart(),'abc/def/',
-  'getTreePart() returns string');
-$t->is((string)$p->getBlobPart(),'ghi',
-  'getBlobPart() returns string');
-$t->ok($p->getShifted() instanceof GitPath,
-  'getShifted() returns GitPath');
-$t->is((string)$p->getShifted(),'def/ghi',
-  'getShifted() returns all items after first part');
-
-$t->comment('Constructor testing');
-$s = 'abc/def/ghi';
-$p = new GitPath("/".$s);
-$t->is((string)$p,$s,
-  'constructor removes leading slashes');
-$p = new GitPath("/////".$s);
-$t->is((string)$p,$s,
-  'constructor removes leading slashes');
-$p = new GitPath("");
-$t->is((string)$p,"/",
-  'constructor makes empty string into root reference');
-$p = new GitPath("/");
-$t->is((string)$p,"/",
-  'constructor accepts / as root reference');
-  
-$s .= '/';
-$p = new GitPath($s);
-$t->is((string)$p,$s,
-  'constructor accepts refTree paths');
-$p = new GitPath($s.'/');
-$t->is((string)$p,$s,
-  'constructor removes trailing slashes');
-$p = new GitPath($s.'/////');
-$t->is((string)$p,$s,
-  'constructor removes trailing slashes');
-
-$p = new GitPath('abc//def//ghi//');
-$t->is((string)$p,$s,
-  'constructor removes empty parts');
-$p = new GitPath('abc  // def//   ghi // ');
-$t->is((string)$p,$s,
-  'constructor removes extra spaces');
-$p = new GitPath('ab c  // d ef//   g h i // ');
-$t->is((string)$p,'ab c/d ef/g h i/',
-  'constructor leaves inner spaces');
-
-$t->comment('isSingle testing');
-$p = new GitPath("/");
-$t->ok($p->isSingle(), 'root is a single reference');
-$p = new GitPath("test/");
-$t->ok($p->isSingle(), 'one directory is a single reference');
-$p = new GitPath("test/file");
-$t->ok(!$p->isSingle(), 'a file in a directory is not single');
-$p = new GitPath("/test");
-$t->ok($p->isSingle(), 'one file is a single reference');
-  
-$t->comment('isRoot testing');
-$p = new GitPath("/");
-$t->ok($p->isRoot(), 'root is a root');
-$p = new GitPath("");
-$t->ok($p->isRoot(), 'empty is a root');
-$p = new GitPath("test");
-$t->ok(!$p->isRoot(), 'a file is not a root');
-
-$t->comment('Testing differences for Tree and Blob paths');
-$p = new GitPath("abc/def/ghi");
-$t->ok($p->refBlob(), 'no trailing slash references a blob object');
-$p = new GitPath("abc/def/ghi/");
-$t->ok($p->refTree(), 'a trailing slash references a tree object');
-
-$t->comment('Testing array access');
-$p = new GitPath("abc/def/ghi");
-$t->is($p[0],'abc',
-  'allows array access');
-$t->is($p[-1],'ghi',
-  'allows negative index array access');
-$t->is(count($p),3,
-  'count returns number of elements');
-  
-$t->comment('Testing iterator');
-$p = new GitPath("abc/def");
-foreach ($p as $index=>$part)
+class GitPathTest extends \PHPUnit\Framework\TestCase
 {
-  switch ($index)
-  {
-    case 0:
-      $t->is($part, 'abc', 'first iteration');
-      break;
-    case 1:
-      $t->is($part, 'def', 'second iteration');
-      break;
-  }
+    
+    function testOutput()
+    {
+        $a = array('abc','def','ghi');
+        $p = new GitPath($a);
+        $this->assertEquals('abc/def/ghi', (string)$p);
+        $this->assertEquals('abc/def/', (string)$p->getTreePart());
+        $this->assertEquals('ghi', (string)$p->getBlobPart());
+        $this->assertInstanceOf(\Glip\GitPath::class , $p->getShifted());
+        $this->assertEquals('def/ghi', (string)$p->getShifted());
+    }
+
+    function testConstructor()
+    {
+
+        $s = 'abc/def/ghi';
+        $p = new GitPath("/".$s);
+        $this->assertEquals($s,(string)$p,
+            'constructor removes leading slashes');
+        $p = new GitPath("/////".$s);
+        $this->assertEquals($s,(string)$p,
+            'constructor removes leading slashes');
+        $p = new GitPath("");
+        $this->assertEquals("/",(string)$p,
+            'constructor makes empty string into root reference');
+        $p = new GitPath("/");
+        $this->assertEquals("/",(string)$p,
+            'constructor accepts / as root reference');
+
+        $s .= '/';
+        $p = new GitPath($s);
+        $this->assertEquals($s,(string)$p,
+            'constructor accepts refTree paths');
+        $p = new GitPath($s.'/');
+        $this->assertEquals($s,(string)$p,
+            'constructor removes trailing slashes');
+        $p = new GitPath($s.'/////');
+        $this->assertEquals($s,(string)$p,
+            'constructor removes trailing slashes');
+
+        $p = new GitPath('abc//def//ghi//');
+        $this->assertEquals($s,(string)$p,
+            'constructor removes empty parts');
+        $p = new GitPath('abc  // def//   ghi // ');
+        $this->assertEquals($s,(string)$p,
+            'constructor removes extra spaces');
+        $p = new GitPath('ab c  // d ef//   g h i // ');
+        $this->assertEquals('ab c/d ef/g h i/',(string)$p,
+            'constructor leaves inner spaces');
+
+    }
+
+    
+    function testIsSingle()
+    {
+        $p = new GitPath("/");
+        $this->assertTrue($p->isSingle(), 'root is a single reference');
+        $p = new GitPath("test/");
+        $this->assertTrue($p->isSingle(), 'one directory is a single reference');
+        $p = new GitPath("test/file");
+        $this->assertTrue(!$p->isSingle(), 'a file in a directory is not single');
+        $p = new GitPath("/test");
+        $this->assertTrue($p->isSingle(), 'one file is a single reference');
+
+
+    }
+
+    function testIsRoot()
+    {
+        $p = new GitPath("/");
+        $this->assertTrue($p->isRoot(), 'root is a root');
+        $p = new GitPath("");
+        $this->assertTrue($p->isRoot(), 'empty is a root');
+        $p = new GitPath("test");
+        $this->assertTrue(!$p->isRoot(), 'a file is not a root');
+    }
+
+    /**
+     * Testing differences for Tree and Blob paths
+     */
+    function testTreeBlobPaths()
+    {
+        $p = new GitPath("abc/def/ghi");
+        $this->assertTrue($p->refBlob(), 'no trailing slash references a blob object');
+        $p = new GitPath("abc/def/ghi/");
+        $this->assertTrue($p->refTree(), 'a trailing slash references a tree object');
+
+    }
+
+    /**
+     * Testing array access
+     */
+    function testArrayAccess()
+    {
+
+        $p = new GitPath("abc/def/ghi");
+        $this->assertEquals('abc', $p[0],
+            'allows array access');
+        $this->assertEquals('ghi', $p[-1],
+            'allows negative index array access');
+        $this->assertEquals(3, count($p),
+            'count returns number of elements');
+
+    }
+    
+    /**
+     * Testing iterator
+     */
+    function testIterator()
+    {
+        $p = new GitPath("abc/def");
+        foreach ($p as $index=>$part)
+        {
+            switch ($index)
+            {
+                case 0:
+                    $this->assertEquals('abc', $part,  'first iteration');
+                    break;
+                case 1:
+                    $this->assertEquals('def',  $part, 'second iteration');
+                    break;
+            }
+        }
+
+    }
+    
+    /**
+     * Testing unset
+     */
+    function testUnset()
+    {
+        $p = new GitPath("abc/def/ghi/jkl");
+        unset($p[0]);
+        $this->assertEquals("def/ghi/jkl", (string)$p,
+            'unset [0] removes first element');
+        unset($p[-1]);
+        $this->assertEquals("def/ghi/", (string)$p,
+            'unset [-1] removes last element');
+
+    }
+    
+    
+    /**
+     * Ancestor check
+     */
+
+    function testAncestor()
+    {
+
+
+        $child = new GitPath("abc/def/ghi");
+        $this->assertTrue($child->hasAncestor(new GitPath('/')),
+            'Root is an ancestor of all');
+        $this->assertTrue($child->hasAncestor(new GitPath('/abc/def/')),
+            'A directory can be an ancestor');
+        $this->assertTrue(!$child->hasAncestor(new GitPath('/abc/def')),
+            'A blob path is never an ancestor');
+    }
 }
 
-$t->comment('Testing unset');
-$p = new GitPath("abc/def/ghi/jkl");
-unset($p[0]);
-$t->is((string)$p,"def/ghi/jkl",
-  'unset [0] removes first element');
-unset($p[-1]);
-$t->is((string)$p,"def/ghi/",
-  'unset [-1] removes last element');
-  
-$t->comment('Ancestor check');
-$child = new GitPath("abc/def/ghi");
-$t->ok($child->hasAncestor(new GitPath('/')),
-  'Root is an ancestor of all');
-$t->ok($child->hasAncestor(new GitPath('/abc/def/')),
-  'A directory can be an ancestor');
-$t->ok(!$child->hasAncestor(new GitPath('/abc/def')),
-  'A blob path is never an ancestor');
